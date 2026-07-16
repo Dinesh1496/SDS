@@ -1,0 +1,803 @@
+{
+  "dashboard": {
+    "title": "SDS Nexus - Tenant Usage & Chargeback",
+    "tags": ["sds-nexus", "tenant", "chargeback", "billing"],
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-30d",
+      "to": "now"
+    },
+    "refresh": "5m",
+    "templating": {
+      "list": [
+        {
+          "name": "cluster",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(rgw_bucket_size_bytes, cluster_name)",
+          "refresh": 1,
+          "includeAll": false,
+          "multi": false,
+          "current": {
+            "text": "ue-south-1",
+            "value": "ue-south-1"
+          }
+        },
+        {
+          "name": "tenant",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(rgw_bucket_size_bytes{cluster_name=\"$cluster\"}, tenant)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+        "id": 1,
+        "title": "Tenant Overview",
+        "type": "row",
+        "collapsed": false
+      },
+      {
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+        "id": 2,
+        "title": "Total Tenants",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(count by (tenant) (rgw_bucket_size_bytes{cluster_name=\"$cluster\"}))",
+            "refId": "A",
+            "legendFormat": "Total Tenants"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+        "id": 3,
+        "title": "Total Storage Used (All Tenants)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(sds_nexus_chargeback_tenant_usage_bytes{cluster_name=\"$cluster\"})",
+            "refId": "A",
+            "legendFormat": "Total Usage"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decbytes",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1099511627776, "color": "yellow"},
+                {"value": 5497558138880, "color": "orange"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 1},
+        "id": 4,
+        "title": "Total Monthly Cost (GBP)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(sds_nexus_chargeback_monthly_cost_gbp{cluster_name=\"$cluster\"})",
+            "refId": "A",
+            "legendFormat": "Total Cost"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyGBP",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1000, "color": "yellow"},
+                {"value": 5000, "color": "orange"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 1},
+        "id": 5,
+        "title": "Total Monthly Cost (USD)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(sds_nexus_chargeback_monthly_cost_usd{cluster_name=\"$cluster\"})",
+            "refId": "A",
+            "legendFormat": "Total Cost"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1270, "color": "yellow"},
+                {"value": 6350, "color": "orange"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5},
+        "id": 10,
+        "title": "Historical Usage Trends",
+        "type": "row",
+        "collapsed": false
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+        "id": 11,
+        "title": "Storage Usage by Tenant (30 Days)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sds_nexus_chargeback_tenant_usage_bytes{cluster_name=\"$cluster\", tenant=~\"$tenant\"}",
+            "refId": "A",
+            "legendFormat": "{{tenant}}"
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "calcs": ["lastNotNull", "mean", "max"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20,
+              "lineWidth": 2,
+              "pointSize": 5,
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": {
+                "mode": "none"
+              }
+            },
+            "unit": "decbytes",
+            "decimals": 2,
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+        "id": 12,
+        "title": "Monthly Cost by Tenant - GBP (30 Days)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sds_nexus_chargeback_monthly_cost_gbp{cluster_name=\"$cluster\", tenant=~\"$tenant\"}",
+            "refId": "A",
+            "legendFormat": "{{tenant}}"
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "calcs": ["lastNotNull", "mean", "max"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20,
+              "lineWidth": 2,
+              "pointSize": 5,
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": {
+                "mode": "none"
+              }
+            },
+            "unit": "currencyGBP",
+            "decimals": 2,
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+        "id": 13,
+        "title": "Storage Growth Rate by Tenant (7 Day Average)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(sds_nexus_chargeback_tenant_usage_bytes{cluster_name=\"$cluster\", tenant=~\"$tenant\"}[7d])",
+            "refId": "A",
+            "legendFormat": "{{tenant}}"
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "calcs": ["lastNotNull", "mean"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "lineWidth": 2,
+              "showPoints": "never",
+              "spanNulls": true
+            },
+            "unit": "Bps",
+            "decimals": 2,
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+        "id": 14,
+        "title": "Cost Growth Rate by Tenant - GBP (7 Day Average)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(sds_nexus_chargeback_monthly_cost_gbp{cluster_name=\"$cluster\", tenant=~\"$tenant\"}[7d]) * 86400 * 30",
+            "refId": "A",
+            "legendFormat": "{{tenant}}"
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "calcs": ["lastNotNull", "mean"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "lineWidth": 2,
+              "showPoints": "never",
+              "spanNulls": true
+            },
+            "unit": "currencyGBP",
+            "decimals": 2,
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 22},
+        "id": 20,
+        "title": "Tenant Details & Rankings",
+        "type": "row",
+        "collapsed": false
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 23},
+        "id": 21,
+        "title": "Top 10 Tenants by Storage Usage",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "topk(10, sds_nexus_chargeback_tenant_usage_bytes{cluster_name=\"$cluster\"})",
+            "refId": "A",
+            "legendFormat": "{{tenant}}",
+            "instant": true
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decbytes",
+            "decimals": 2,
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 50, "color": "yellow"},
+                {"value": 80, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 23},
+        "id": 22,
+        "title": "Top 10 Tenants by Monthly Cost (GBP)",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "topk(10, sds_nexus_chargeback_monthly_cost_gbp{cluster_name=\"$cluster\"})",
+            "refId": "A",
+            "legendFormat": "{{tenant}}",
+            "instant": true
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyGBP",
+            "decimals": 2,
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 50, "color": "yellow"},
+                {"value": 80, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 31},
+        "id": 23,
+        "title": "Tenant Usage & Cost Table",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sds_nexus_chargeback_tenant_usage_bytes{cluster_name=\"$cluster\", tenant=~\"$tenant\"}",
+            "refId": "A",
+            "legendFormat": "",
+            "instant": true,
+            "format": "table"
+          },
+          {
+            "expr": "sds_nexus_chargeback_monthly_cost_gbp{cluster_name=\"$cluster\", tenant=~\"$tenant\"}",
+            "refId": "B",
+            "legendFormat": "",
+            "instant": true,
+            "format": "table"
+          },
+          {
+            "expr": "sds_nexus_chargeback_monthly_cost_usd{cluster_name=\"$cluster\", tenant=~\"$tenant\"}",
+            "refId": "C",
+            "legendFormat": "",
+            "instant": true,
+            "format": "table"
+          },
+          {
+            "expr": "sum by (tenant) (rgw_bucket_total{cluster_name=\"$cluster\", tenant=~\"$tenant\"})",
+            "refId": "D",
+            "legendFormat": "",
+            "instant": true,
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "merge",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true,
+                "cluster_name": true,
+                "__name__": true
+              },
+              "indexByName": {
+                "tenant": 0,
+                "Value #A": 1,
+                "Value #B": 2,
+                "Value #C": 3,
+                "Value #D": 4
+              },
+              "renameByName": {
+                "tenant": "Tenant",
+                "Value #A": "Storage Usage",
+                "Value #B": "Monthly Cost (GBP)",
+                "Value #C": "Monthly Cost (USD)",
+                "Value #D": "Bucket Count"
+              }
+            }
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "displayName": "Storage Usage",
+              "desc": true
+            }
+          ]
+        },
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Storage Usage"},
+              "properties": [
+                {"id": "unit", "value": "decbytes"},
+                {"id": "decimals", "value": 2},
+                {"id": "custom.width", "value": 150}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "Monthly Cost (GBP)"},
+              "properties": [
+                {"id": "unit", "value": "currencyGBP"},
+                {"id": "decimals", "value": 2},
+                {"id": "custom.width", "value": 180}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "Monthly Cost (USD)"},
+              "properties": [
+                {"id": "unit", "value": "currencyUSD"},
+                {"id": "decimals", "value": 2},
+                {"id": "custom.width", "value": 180}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "Bucket Count"},
+              "properties": [
+                {"id": "unit", "value": "short"},
+                {"id": "custom.width", "value": 120}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "Tenant"},
+              "properties": [
+                {"id": "custom.width", "value": 200}
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 39},
+        "id": 30,
+        "title": "Bucket-Level Details",
+        "type": "row",
+        "collapsed": false
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40},
+        "id": 31,
+        "title": "Top 20 Buckets by Size",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(20, rgw_bucket_size_bytes{cluster_name=\"$cluster\", tenant=~\"$tenant\"})",
+            "refId": "A",
+            "legendFormat": "",
+            "instant": true,
+            "format": "table"
+          },
+          {
+            "expr": "topk(20, rgw_bucket_objects{cluster_name=\"$cluster\", tenant=~\"$tenant\"})",
+            "refId": "B",
+            "legendFormat": "",
+            "instant": true,
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "merge",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true,
+                "cluster_name": true,
+                "__name__": true
+              },
+              "indexByName": {
+                "tenant": 0,
+                "bucket_name": 1,
+                "Value #A": 2,
+                "Value #B": 3
+              },
+              "renameByName": {
+                "tenant": "Tenant",
+                "bucket_name": "Bucket",
+                "Value #A": "Size",
+                "Value #B": "Objects"
+              }
+            }
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "displayName": "Size",
+              "desc": true
+            }
+          ]
+        },
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Size"},
+              "properties": [
+                {"id": "unit", "value": "decbytes"},
+                {"id": "decimals", "value": 2}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "Objects"},
+              "properties": [
+                {"id": "unit", "value": "short"},
+                {"id": "decimals", "value": 0}
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40},
+        "id": 32,
+        "title": "Bucket Growth Trends (Selected Tenant)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rgw_bucket_size_bytes{cluster_name=\"$cluster\", tenant=~\"$tenant\"}",
+            "refId": "A",
+            "legendFormat": "{{bucket_name}}"
+          }
+        ],
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          },
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 0,
+              "lineWidth": 1,
+              "showPoints": "never",
+              "spanNulls": true
+            },
+            "unit": "decbytes",
+            "decimals": 2,
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 48},
+        "id": 40,
+        "title": "Cost Breakdown & Projections",
+        "type": "row",
+        "collapsed": false
+      },
+      {
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 49},
+        "id": 41,
+        "title": "Cost Distribution (GBP) - Current Month",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sds_nexus_chargeback_monthly_cost_gbp{cluster_name=\"$cluster\", tenant=~\"$tenant\"}",
+            "refId": "A",
+            "legendFormat": "{{tenant}}",
+            "instant": true
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "pie",
+          "tooltip": {
+            "mode": "single"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyGBP",
+            "decimals": 2
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 49},
+        "id": 42,
+        "title": "Cost Distribution (USD) - Current Month",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sds_nexus_chargeback_monthly_cost_usd{cluster_name=\"$cluster\", tenant=~\"$tenant\"}",
+            "refId": "A",
+            "legendFormat": "{{tenant}}",
+            "instant": true
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "pie",
+          "tooltip": {
+            "mode": "single"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 49},
+        "id": 43,
+        "title": "Storage Distribution - Current",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sds_nexus_chargeback_tenant_usage_bytes{cluster_name=\"$cluster\", tenant=~\"$tenant\"}",
+            "refId": "A",
+            "legendFormat": "{{tenant}}",
+            "instant": true
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "pie",
+          "tooltip": {
+            "mode": "single"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decbytes",
+            "decimals": 2
+          }
+        }
+      }
+    ]
+  }
+}

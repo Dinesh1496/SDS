@@ -1,0 +1,217 @@
+# Alert rules for SDS Nexus Platform
+
+groups:
+  - name: ceph_cluster_health
+    interval: 60s
+    rules:
+      # Cluster Health Status
+      - alert: CephClusterUnhealthy
+        expr: ceph_cluster_health_status{cluster_name!=""} > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: ceph
+        annotations:
+          summary: "Ceph cluster {{ $labels.cluster_name }} is unhealthy"
+          description: "Cluster health status is {{ $value }} (0=OK, 1=WARN, 2=ERR). Check cluster status immediately."
+
+      # Capacity Alerts
+      - alert: CephClusterNearFull
+        expr: ceph_cluster_utilization_percent{cluster_name!=""} > 75
+        for: 10m
+        labels:
+          severity: warning
+          component: ceph
+        annotations:
+          summary: "Ceph cluster {{ $labels.cluster_name }} is {{ $value }}% full"
+          description: "Cluster capacity utilization has exceeded 75%. Consider adding capacity or cleaning up data."
+
+      - alert: CephClusterCriticallyFull
+        expr: ceph_cluster_utilization_percent{cluster_name!=""} > 85
+        for: 5m
+        labels:
+          severity: critical
+          component: ceph
+        annotations:
+          summary: "Ceph cluster {{ $labels.cluster_name }} is critically full ({{ $value }}%)"
+          description: "Cluster capacity utilization has exceeded 85%. Immediate action required to prevent data loss."
+
+  - name: ceph_osd_health
+    interval: 60s
+    rules:
+      # OSD Down
+      - alert: CephOSDDown
+        expr: ceph_osd_down{cluster_name!=""} > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: osd
+        annotations:
+          summary: "{{ $value }} OSD(s) down in cluster {{ $labels.cluster_name }}"
+          description: "One or more OSDs are in DOWN state. Check node health and network connectivity."
+
+      - alert: CephOSDMultipleDown
+        expr: ceph_osd_down{cluster_name!=""} >= 3
+        for: 5m
+        labels:
+          severity: critical
+          component: osd
+        annotations:
+          summary: "Multiple OSDs down in cluster {{ $labels.cluster_name }} ({{ $value }})"
+          description: "Three or more OSDs are down. This may indicate a systemic issue. Investigate immediately."
+
+      # OSD Out
+      - alert: CephOSDOut
+        expr: ceph_osd_out{cluster_name!=""} > 0
+        for: 30m
+        labels:
+          severity: warning
+          component: osd
+        annotations:
+          summary: "{{ $value }} OSD(s) marked OUT in cluster {{ $labels.cluster_name }}"
+          description: "OSDs have been marked OUT of the cluster for more than 30 minutes. Check if this is intentional."
+
+  - name: ceph_mon_health
+    interval: 60s
+    rules:
+      # MON Quorum
+      - alert: CephMONQuorumLost
+        expr: ceph_mon_in_quorum{cluster_name!=""} < (ceph_mon_total{cluster_name!=""} / 2 + 1)
+        for: 5m
+        labels:
+          severity: critical
+          component: mon
+        annotations:
+          summary: "Ceph MON quorum lost in cluster {{ $labels.cluster_name }}"
+          description: "Only {{ $value }} of {{ $labels.total }} MONs are in quorum. Cluster operations may be degraded or unavailable."
+
+  - name: ceph_placement_groups
+    interval: 60s
+    rules:
+      # Degraded PGs
+      - alert: CephPGsDegraded
+        expr: ceph_pg_degraded{cluster_name!=""} > 10
+        for: 15m
+        labels:
+          severity: warning
+          component: placement_group
+        annotations:
+          summary: "{{ $value }} degraded PGs in cluster {{ $labels.cluster_name }}"
+          description: "Placement groups are degraded. This indicates data is not fully replicated. Check cluster health."
+
+      - alert: CephPGsCriticallyDegraded
+        expr: (ceph_pg_degraded{cluster_name!=""} / ceph_pg_total{cluster_name!=""}) > 0.1
+        for: 10m
+        labels:
+          severity: critical
+          component: placement_group
+        annotations:
+          summary: "Over 10% of PGs degraded in cluster {{ $labels.cluster_name }}"
+          description: "A significant portion of placement groups are degraded. Data redundancy is at risk."
+
+      # Undersized PGs
+      - alert: CephPGsUndersized
+        expr: ceph_pg_undersized{cluster_name!=""} > 5
+        for: 15m
+        labels:
+          severity: warning
+          component: placement_group
+        annotations:
+          summary: "{{ $value }} undersized PGs in cluster {{ $labels.cluster_name }}"
+          description: "Placement groups are undersized (fewer replicas than configured). Check OSD availability."
+
+  - name: ceph_node_health
+    interval: 60s
+    rules:
+      # High CPU Usage
+      - alert: CephNodeHighCPU
+        expr: ceph_node_cpu_usage_percent{cluster_name!="",node_name!=""} > 90
+        for: 15m
+        labels:
+          severity: warning
+          component: node
+        annotations:
+          summary: "High CPU usage on node {{ $labels.node_name }} ({{ $value }}%)"
+          description: "CPU utilization has been above 90% for 15 minutes. Check for resource-intensive processes."
+
+      # High Memory Usage
+      - alert: CephNodeHighMemory
+        expr: ceph_node_memory_usage_percent{cluster_name!="",node_name!=""} > 90
+        for: 15m
+        labels:
+          severity: warning
+          component: node
+        annotations:
+          summary: "High memory usage on node {{ $labels.node_name }} ({{ $value }}%)"
+          description: "Memory utilization has been above 90% for 15 minutes. Risk of OOM conditions."
+
+      # High Temperature
+      - alert: CephNodeHighTemperature
+        expr: ceph_node_temperature_celsius{cluster_name!="",node_name!=""} > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: node
+        annotations:
+          summary: "High temperature on node {{ $labels.node_name }} ({{ $value }}°C)"
+          description: "CPU temperature is above 80°C. Check cooling systems."
+
+      - alert: CephNodeCriticalTemperature
+        expr: ceph_node_temperature_celsius{cluster_name!="",node_name!=""} > 90
+        for: 5m
+        labels:
+          severity: critical
+          component: node
+        annotations:
+          summary: "Critical temperature on node {{ $labels.node_name }} ({{ $value }}°C)"
+          description: "CPU temperature is critically high. Risk of thermal throttling or hardware damage."
+
+  - name: platform_health
+    interval: 60s
+    rules:
+      # API Response Time
+      - alert: HighAPIResponseTime
+        expr: histogram_quantile(0.95, rate(sds_nexus_http_request_duration_seconds_bucket[5m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API response time (95th percentile > 5s)"
+          description: "API is responding slowly. Check database and external service connectivity."
+
+      # Worker Job Failures
+      - alert: WorkerJobFailures
+        expr: rate(sds_nexus_worker_job_execution_total{status="failed"}[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: worker
+        annotations:
+          summary: "Worker job {{ $labels.job_name }} failing frequently"
+          description: "Job failure rate is above threshold. Check worker logs for details."
+
+      # Database Connection Pool Exhaustion
+      - alert: DatabasePoolExhaustion
+        expr: sds_nexus_db_connection_pool_checked_out / sds_nexus_db_connection_pool_size > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Over 90% of database connections are in use. Consider increasing pool size."
+
+  - name: rgw_object_storage
+    interval: 60s
+    rules:
+      # Large Bucket Growth
+      - alert: RGWBucketRapidGrowth
+        expr: rate(rgw_bucket_size_bytes{cluster_name!="",bucket_name!=""}[1h]) > 1073741824
+        for: 4h
+        labels:
+          severity: info
+          component: rgw
+        annotations:
+          summary: "Bucket {{ $labels.bucket_name }} growing rapidly"
+          description: "Bucket is growing by more than 1GB/hour. Growth rate: {{ $value | humanize }}B/s"

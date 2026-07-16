@@ -1,0 +1,172 @@
+version: "3.9"
+
+# =============================================================================
+# SDS Nexus Platform — Development Docker Compose
+# Includes: API, PostgreSQL, Prometheus, Grafana
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: sds-nexus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sds_nexus
+      POSTGRES_USER: sds_nexus_user
+      POSTGRES_PASSWORD: devpassword123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sds_nexus_user -d sds_nexus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - sds-nexus-net
+
+  # ---------------------------------------------------------------------------
+  # Platform API
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: sds-nexus-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "8000"
+      APP_DEBUG: "true"
+      APP_SECRET_KEY: "dev-secret-key-do-not-use-in-production-min-32"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: sds_nexus
+      DB_USER: sds_nexus_user
+      DB_PASSWORD: devpassword123
+      DB_ECHO_SQL: "false"
+      LOG_LEVEL: DEBUG
+      LOG_FORMAT: text
+      JWT_SECRET_KEY: "dev-jwt-secret-do-not-use-in-production-min-32"
+    volumes:
+      - ../app:/app/app:ro     # Mount source for hot-reload in dev
+      - reports_data:/var/sds-nexus/reports
+      - log_data:/var/log/sds-nexus
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - sds-nexus-net
+
+  # ---------------------------------------------------------------------------
+  # Prometheus — Metrics Collection & Alerting
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sds-nexus-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - sds-nexus-net
+    depends_on:
+      - api
+
+  # ---------------------------------------------------------------------------
+  # Grafana — Visualization & Dashboards
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sds-nexus-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: ''
+      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - sds-nexus-net
+    depends_on:
+      - prometheus
+
+  # ---------------------------------------------------------------------------
+  # Alembic Migrations (one-shot service)
+  # ---------------------------------------------------------------------------
+  migrations:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: sds-nexus-migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: sds_nexus
+      DB_USER: sds_nexus_user
+      DB_PASSWORD: devpassword123
+      APP_SECRET_KEY: "dev-secret-key-do-not-use-in-production-min-32"
+      JWT_SECRET_KEY: "dev-jwt-secret-do-not-use-in-production-min-32"
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - sds-nexus-net
+    profiles:
+      - migrate   # Run with: docker-compose --profile migrate up migrations
+
+# ---------------------------------------------------------------------------
+# Volumes
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    name: sds-nexus-postgres-data
+  reports_data:
+    name: sds-nexus-reports
+  log_data:
+    name: sds-nexus-logs
+  prometheus_data:
+    name: sds-nexus-prometheus-data
+  grafana_data:
+    name: sds-nexus-grafana-data
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  sds-nexus-net:
+    name: sds-nexus-network
+    driver: bridge

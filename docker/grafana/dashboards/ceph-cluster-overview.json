@@ -1,0 +1,317 @@
+{
+  "dashboard": {
+    "title": "SDS Nexus - Ceph Cluster Overview",
+    "tags": ["sds-nexus", "ceph", "cluster"],
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "panels": [
+      {
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "id": 1,
+        "title": "Cluster Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ceph_cluster_health_status{cluster_name=\"ue-south-1\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "value": "0", "text": "HEALTHY"},
+              {"type": "value", "value": "1", "text": "WARNING"},
+              {"type": "value", "value": "2", "text": "ERROR"}
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 2, "color": "red"}
+              ]
+            },
+            "unit": "none"
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "id": 2,
+        "title": "Capacity Utilization",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "ceph_cluster_utilization_percent{cluster_name=\"ue-south-1\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 75, "color": "yellow"},
+                {"value": 85, "color": "red"}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "id": 3,
+        "title": "OSDs Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ceph_osd_up{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "UP",
+            "refId": "A"
+          },
+          {
+            "expr": "ceph_osd_down{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "DOWN",
+            "refId": "B"
+          },
+          {
+            "expr": "ceph_osd_total{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "TOTAL",
+            "refId": "C"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"}
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "DOWN"},
+              "properties": [
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "green"},
+                      {"value": 1, "color": "red"}
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+        "id": 4,
+        "title": "MON Quorum",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ceph_mon_in_quorum{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "In Quorum",
+            "refId": "A"
+          },
+          {
+            "expr": "ceph_mon_total{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "Total",
+            "refId": "B"
+          }
+        ],
+        "options": {
+          "colorMode": "value"
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "id": 5,
+        "title": "Cluster Capacity (Bytes)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "ceph_cluster_total_bytes{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "Total Capacity",
+            "refId": "A"
+          },
+          {
+            "expr": "ceph_cluster_used_bytes{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "Used",
+            "refId": "B"
+          },
+          {
+            "expr": "ceph_cluster_available_bytes{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "Available",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "fillOpacity": 10
+            },
+            "unit": "decbytes"
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "id": 6,
+        "title": "Capacity Utilization Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "ceph_cluster_utilization_percent{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "Utilization %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 30
+            },
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 75, "color": "yellow"},
+                {"value": 85, "color": "red"}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "id": 7,
+        "title": "Placement Groups Status",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "ceph_pg_active_clean{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "Active+Clean",
+            "refId": "A"
+          },
+          {
+            "expr": "ceph_pg_degraded{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "Degraded",
+            "refId": "B"
+          },
+          {
+            "expr": "ceph_pg_undersized{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "Undersized",
+            "refId": "C"
+          },
+          {
+            "expr": "ceph_pg_recovering{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "Recovering",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "fillOpacity": 0
+            },
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Degraded"},
+              "properties": [
+                {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "Active+Clean"},
+              "properties": [
+                {"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "id": 8,
+        "title": "OSD Up/Down Status",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "ceph_osd_up{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "OSDs UP",
+            "refId": "A"
+          },
+          {
+            "expr": "ceph_osd_down{cluster_name=\"ue-south-1\"}",
+            "legendFormat": "OSDs DOWN",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "stepAfter",
+              "fillOpacity": 30
+            },
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "OSDs DOWN"},
+              "properties": [
+                {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}
+              ]
+            },
+            {
+              "matcher": {"id": "byName", "options": "OSDs UP"},
+              "properties": [
+                {"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
