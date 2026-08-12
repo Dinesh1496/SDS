@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sds-nexus-api
+  namespace: sds-nexus
+  labels:
+    app: sds-nexus-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sds-nexus-api
+  template:
+    metadata:
+      labels:
+        app: sds-nexus-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/api/v1/metrics"
+    spec:
+      containers:
+      - name: api
+        image: sds-nexus:latest  # Build from your Dockerfile
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: APP_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: sds-nexus-config
+              key: APP_ENV
+        - name: APP_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: sds-nexus-secrets
+              key: app-secret-key
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: sds-nexus-secrets
+              key: jwt-secret-key
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: sds-nexus-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: sds-nexus-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: sds-nexus-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: sds-nexus-config
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sds-nexus-secrets
+              key: db-password
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health/live
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health/ready
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
